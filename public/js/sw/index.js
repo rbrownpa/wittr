@@ -10,7 +10,7 @@ self.addEventListener('fetch', function(event){
        return response;
      }).catch(function() {
 
-       return new Response("Uh oh, that totally failed!");
+       return new Response("Oh no, that totally failed!");
      })
 
  );

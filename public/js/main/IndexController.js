@@ -14,15 +14,71 @@ export default function IndexController(container) {
 
 IndexController.prototype._registerServiceWorker = function() {
 
-if (!navigator.serviceWorker) return;
 
-  navigator.serviceWorker.register('/sw.js').then(function() {
-    console.log('registration worked')
-  }).catch(function(){
-    console.log('registration failed');
+    var indexController = this;
+
+    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+      // If there's no controller, this page wasn't loaded via a service worker, so they're looking at the latest version.
+      // In that case, exit early
+      if (!navigator.serviceWorker.controller) return;
+
+      // If there's an updated worker already waiting, call
+      // indexController._updateReady()
+      if (reg.waiting) {
+        indexController._updateReady();
+        return;
+      }
+
+      // If there's an updated worker installing, track its progress. If it becomes "installed", call
+      // indexController._updateReady()
+      if (reg.installing) {
+        indexController._trackInstalling(reg.installing);
+        return;
+      }
+
+      // TODO: otherwise, listen for new installing workers arriving.
+      // If one arrives, track its progress.
+      // If it becomes "installed", call
+      // indexController._updateReady()
+      reg.addEventListener('updatefound', function() {
+        indexController._trackInstalling(reg.installing);
+      });
+    });
+
+
+};
+
+//A function the track the installation status of a worker
+IndexController.prototype._trackInstalling = function(worker) {
+  var indexController = this;
+
+  //The worker will fire a statechange event when moving between 'installing', 'installed', 'active' etc
+  worker.addEventListener('statechange', function() {
+    //If the worker is now installed, let the user know that there is an update ready
+    if (worker.state == 'installed') {
+      indexController._updateReady();
+    }
   });
 };
 
+
+//show new service worker again
+IndexController.prototype._updateReady = function() {
+    var toast = this._toastsView.show("New version available", {
+        buttons: ['Refresh', 'Dismiss']
+    });
+    toast.answer.then(function(answer) {
+      if ( answer != 'Refresh') return;
+      self.addEventListener('install', function(event) {
+  // The promise that skipWaiting() returns can be safely ignored.
+  self.skipWaiting();
+
+  // Perform any other actions required for your
+  // service worker to install, potentially inside
+  // of event.waitUntil();
+});
+    })
+};
 // open a connection to the server for live updates
 IndexController.prototype._openSocket = function() {
   var indexController = this;
